@@ -171,7 +171,7 @@ class PickerActivity : Activity() {
     private fun finishWith(uris: List<Uri>) {
         val clip = ClipData.newRawUri(null, uris[0])
         uris.drop(1).forEach { clip.addItem(ClipData.Item(it)) }
-        val r = Intent().setData(uris[0]).setClipData(clip).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val r = Intent().setData(uris[0]); r.clipData = clip; r.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         setResult(RESULT_OK, r)
         finish()
     }
