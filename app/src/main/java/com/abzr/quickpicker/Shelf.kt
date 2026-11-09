@@ -15,13 +15,12 @@ object Shelf {
 
     fun list(c: Context): List<Item> =
         dir(c).listFiles()?.sortedByDescending { it.lastModified() }?.map {
-            val ext = it.extension.lowercase()
-            Item(
-                FileProvider.getUriForFile(c, "${c.packageName}.files", it),
-                it.name,
-                MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "application/octet-stream"
-            )
+            Item(FileProvider.getUriForFile(c, "${c.packageName}.files", it), it.name, mimeOf(it.name))
         } ?: emptyList()
+
+    fun mimeOf(name: String): String =
+        MimeTypeMap.getSingleton().getMimeTypeFromExtension(File(name).extension.lowercase())
+            ?: "application/octet-stream"
 
     fun save(c: Context, src: Uri): Boolean = try {
         var name = c.contentResolver.query(src, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)

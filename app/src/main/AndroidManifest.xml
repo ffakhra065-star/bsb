@@ -5,7 +5,15 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
+
     <application
+        android:icon="@drawable/ic_launcher"
         android:label="Quick Picker"
         android:theme="@style/AppTheme">
 
@@ -55,6 +63,18 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
+
+        <!-- Files app ke side menu me "Quick Picker" (backup raasta) -->
+        <provider
+            android:name=".QuickDocsProvider"
+            android:authorities="${applicationId}.docs"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
 
         <provider
             android:name="androidx.core.content.FileProvider"

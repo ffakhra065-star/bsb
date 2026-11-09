@@ -49,10 +49,12 @@ class PickerActivity : Activity() {
     private lateinit var doneBtn: Button
     private val adapter = Adapter()
 
-    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+    private fun dp(v: Int) = Ui.dp(this, v)
     private fun perm() = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES
                          else Manifest.permission.READ_EXTERNAL_STORAGE
     private fun hasPerm() = checkSelfPermission(perm()) == PackageManager.PERMISSION_GRANTED
+
+    private fun lp(gap: Int = 4) = LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(gap), 0, dp(gap), 0) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,63 +67,70 @@ class PickerActivity : Activity() {
 
         val sheet = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(12), dp(12), dp(12))
+            setPadding(dp(14), dp(10), dp(14), dp(14))
             isClickable = true
+            val r = dp(24).toFloat()
             background = GradientDrawable().apply {
-                setColor(Color.WHITE)
-                cornerRadii = floatArrayOf(dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), 0f, 0f, 0f, 0f)
+                setColor(Ui.BG)
+                cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
             }
         }
         root.addView(sheet, FrameLayout.LayoutParams(-1, (resources.displayMetrics.heightPixels * 0.68).toInt(), Gravity.BOTTOM))
 
+        // chhota handle
+        sheet.addView(View(this).apply { background = Ui.round(Ui.MUTED, dp(3)) },
+            LinearLayout.LayoutParams(dp(40), dp(5)).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(10) })
+
         sheet.addView(TextView(this).apply {
             text = "Upload ke liye file chuno"; textSize = 18f; setTypeface(null, Typeface.BOLD)
-            setPadding(dp(4), 0, 0, dp(8))
+            setTextColor(Color.WHITE); setPadding(dp(4), 0, 0, dp(10))
         })
 
         val tabs = LinearLayout(this)
-        tabGallery = Button(this).apply { text = "Photos"; setOnClickListener { showGallery = true; load() } }
-        tabSaved = Button(this).apply { text = "Saved"; setOnClickListener { showGallery = false; load() } }
-        tabs.addView(tabGallery, LinearLayout.LayoutParams(0, -2, 1f))
-        tabs.addView(tabSaved, LinearLayout.LayoutParams(0, -2, 1f))
-        sheet.addView(tabs)
+        tabGallery = Ui.btn(this, "Photos").apply { setOnClickListener { showGallery = true; load() } }
+        tabSaved = Ui.btn(this, "Saved").apply { setOnClickListener { showGallery = false; load() } }
+        tabs.addView(tabGallery, lp(0).apply { rightMargin = dp(4) })
+        tabs.addView(tabSaved, lp(0).apply { leftMargin = dp(4) })
+        sheet.addView(tabs, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
 
         val body = FrameLayout(this)
         grid = GridView(this).apply {
-            numColumns = 3; horizontalSpacing = dp(4); verticalSpacing = dp(4)
+            numColumns = 3; horizontalSpacing = dp(6); verticalSpacing = dp(6)
+            selector = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
             this.adapter = this@PickerActivity.adapter
             setOnItemClickListener { _, _, pos, _ -> onPick(items[pos]) }
         }
-        empty = TextView(this).apply { gravity = Gravity.CENTER; textSize = 15f; setPadding(dp(24), 0, dp(24), 0) }
+        empty = TextView(this).apply {
+            gravity = Gravity.CENTER; textSize = 15f; setTextColor(Ui.SUB); setPadding(dp(24), 0, dp(24), 0)
+        }
         body.addView(grid, FrameLayout.LayoutParams(-1, -1))
         body.addView(empty, FrameLayout.LayoutParams(-1, -1))
         sheet.addView(body, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val bottom = LinearLayout(this)
-        bottom.addView(Button(this).apply {
-            text = "Files app"
+        bottom.addView(Ui.btn(this, "Files app", false).apply {
             setOnClickListener {
                 val i = Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
                     .setType(intent.type ?: "*/*").putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multi)
                 startActivityForResult(i, 1)
             }
-        }, LinearLayout.LayoutParams(0, -2, 1f))
-        doneBtn = Button(this).apply {
-            text = "Done"; visibility = if (multi) View.VISIBLE else View.GONE
+        }, lp(0).apply { rightMargin = dp(4) })
+        doneBtn = Ui.btn(this, "Done").apply {
+            visibility = if (multi) View.VISIBLE else View.GONE
             setOnClickListener { if (selected.isNotEmpty()) finishWith(selected.toList()) }
         }
-        bottom.addView(doneBtn, LinearLayout.LayoutParams(0, -2, 1f))
-        sheet.addView(bottom)
+        bottom.addView(doneBtn, lp(0).apply { leftMargin = dp(4) })
+        sheet.addView(bottom, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
 
         setContentView(root)
         load()
     }
 
     private fun load() {
-        tabGallery.setTypeface(null, if (showGallery) Typeface.BOLD else Typeface.NORMAL)
-        tabSaved.setTypeface(null, if (!showGallery) Typeface.BOLD else Typeface.NORMAL)
+        Ui.style(tabGallery, showGallery)
+        Ui.style(tabSaved, !showGallery)
         if (!showGallery) {
-            setItems(Shelf.list(this), "Abhi koi saved file nahi.\nKisi bhi app se Share -> Quick Picker karo.")
+            setItems(Shelf.list(this), "Abhi koi saved file nahi.\nKisi bhi app se Share → Quick Picker karo.")
             return
         }
         if (!hasPerm()) {
@@ -171,7 +180,9 @@ class PickerActivity : Activity() {
     private fun finishWith(uris: List<Uri>) {
         val clip = ClipData.newRawUri(null, uris[0])
         uris.drop(1).forEach { clip.addItem(ClipData.Item(it)) }
-        val r = Intent().setData(uris[0]); r.clipData = clip; r.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val r = Intent().setData(uris[0])
+        r.clipData = clip
+        r.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         setResult(RESULT_OK, r)
         finish()
     }
@@ -197,12 +208,16 @@ class PickerActivity : Activity() {
 
     private inner class Cell(c: Context) : FrameLayout(c) {
         val img = ImageView(c).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
-        val label = TextView(c).apply { gravity = Gravity.CENTER; textSize = 11f; setPadding(dp(4), 0, dp(4), 0) }
+        val label = TextView(c).apply {
+            gravity = Gravity.CENTER; textSize = 11f; setTextColor(Color.WHITE); setPadding(dp(4), 0, dp(4), 0)
+        }
         val check = TextView(c).apply {
-            text = "✔"; setTextColor(Color.WHITE); gravity = Gravity.CENTER; setBackgroundColor(0x990066FF.toInt())
+            text = "✔"; textSize = 26f; setTextColor(Color.WHITE); gravity = Gravity.CENTER
+            setBackgroundColor(0xAA6366F1.toInt())
         }
         init {
-            setBackgroundColor(0xFFEEEEEE.toInt())
+            background = Ui.round(Ui.CARD, dp(12))
+            clipToOutline = true
             addView(img, LayoutParams(-1, -1)); addView(label, LayoutParams(-1, -1)); addView(check, LayoutParams(-1, -1))
         }
         override fun onMeasure(w: Int, h: Int) { super.onMeasure(w, w) }
